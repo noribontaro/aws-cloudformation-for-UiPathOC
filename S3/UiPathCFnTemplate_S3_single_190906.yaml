@@ -1,0 +1,1176 @@
+---
+# For UiPath Permanent Environment With DirectConnect
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFromation Template for UiPath Permanent Environment
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: VPC CIDRs
+      Parameters:
+      - VPCCIDR
+      - WorkSpacesSubnet01CIDR
+      - WorkSpacesSubnet02CIDR
+      - ELBSubnet01CIDR
+      - ELBSubnet02CIDR
+      - WebServerSubnet01CIDR
+      - WebServerSubnet02CIDR
+      - DataStoreSubnet01CIDR
+      - DataStoreSubnet02CIDR
+      - NATGWSubnetCIDR01
+      - NATGWSubnetCIDR02
+      - AmiSubnetCIDR
+    - Label:
+        default: Elasticsearch
+      Parameters:
+      - ESDomainName
+      - ESInstanceType
+      - ESInstanceNumber
+      - ESDedicatedMasterType
+    - Label:
+        default: RDS SQL Server
+      Parameters:
+      - RDSInstanceIdentifier
+      - RDSMasterUsername
+      - RDSUserPassword
+      - RDSInstanceType
+    - Label:
+        default: Directory Service for WorkSpaces
+      Parameters:
+      - DirectoryName
+      - DirectoryShortName
+      - SimpleADPW
+    - Label:
+        default: Route53 Private Hosted Zone
+      Parameters:
+      - UiPathPrivateHostedZone
+    - Label:
+        default: Cognito
+      Parameters:
+      - CognitoUserPoolName
+      - CognitoIdentityPoolName
+
+    ParameterLabels:
+      VPCCIDR:
+        default: "VPC CIDR"
+      WorkSpacesSubnet01CIDR:
+        default: "WorkSpaces Subnet01 CIDR"
+      WorkSpacesSubnet02CIDR:
+        default: "WorkSpaces Subnet02 CIDR"
+      ELBSubnet01CIDR:
+        default: "Elastic Load Balarncer Subnet01 CIDR"
+      ELBSubnet02CIDR:
+        default: "Elastic Load Balarncer Subnet02 CIDR"
+      WebServerSubnet01CIDR:
+        default: "WebServer Subnet01 CIDR"
+      WebServerSubnet02CIDR:
+        default: "WebServer Subnet02 CIDR"
+      DataStoreSubnet01CIDR:
+        default: "DataStore Subnet01 CIDR"
+      DataStoreSubnet02CIDR:
+        default: "DataStore Subnet02 CIDR"
+      NATGWSubnetCIDR01:
+        default: "NAT Gateway Subnet01 CIDR"
+      NATGWSubnetCIDR02:
+        default: "NAT Gateway Subnet02 CIDR"
+      AmiSubnetCIDR:
+        default: "AMI Instance Subnet CIDR"
+      ESDomainName:
+        default: "Elasticsearch Domain Name"
+      ESInstanceType:
+        default: "Elasticsearch Instance Type"
+      ESInstanceNumber:
+        default: "Number of Elasticsearch Instance"
+      RDSMasterUsername:
+        default: "RDS Master User Name"
+      RDSUserPassword:
+        default: "RDS User Password"
+      RDSInstanceType:
+        default: "RDS Instance Type"
+      RDSInstanceIdentifier:
+        default: "RDS Instance Identifier"
+      DirectoryName:
+        default: "Directory Name"
+      DirectoryShortName:
+        default: "Directory Short Name"
+      SimpleADPW:
+        default: "Simple AD Admin Password"
+      UiPathPrivateHostedZone:
+        default: "Private Hosted Zone for UiPath"
+      CognitoUserPoolName:
+        default: "Cognito User Pool Name"
+      CognitoIdentityPoolName:
+        default: "Cognito Identity Pool Name"
+
+Parameters:
+  # VPC and subnet CIDRs
+  VPCCIDR:
+    Description: "VPC CIDR.recommend /16"
+    Default: "10.10.0.0/24"
+    Type: String
+  WorkSpacesSubnet01CIDR:
+    Description: "WorkSpaces Subnet01 CIDR. recommend /28"
+    Default: "10.10.0.0/28"
+    Type: String
+  WorkSpacesSubnet02CIDR:
+    Description: "WorkSpaces Subnet02 CIDR. recommend /28"
+    Default: "10.10.0.16/28"
+    Type: String
+  ELBSubnet01CIDR:
+    Description: "Network Load Balarncer Subnet01 CIDR. recommend /28"
+    Default: "10.10.0.32/28"
+    Type: String
+  ELBSubnet02CIDR:
+    Description: "Network Load Balarncer Subnet02 CIDR. recommend /28"
+    Default: "10.10.0.48/28"
+    Type: String
+  WebServerSubnet01CIDR:
+    Description: "WebServer Subnet01 CIDR. recommend /28"
+    Default: "10.10.0.64/28"
+    Type: String
+  WebServerSubnet02CIDR:
+    Description: "WebServer Subnet02 CIDR. recommend /28"
+    Default: "10.10.0.80/28"
+    Type: String
+  DataStoreSubnet01CIDR:
+    Description: "Data Store Subnet01 CIDR. recommend /27"
+    Default: "10.10.0.96/27"
+    Type: String
+  DataStoreSubnet02CIDR:
+    Description: "Data Store Subnet02 CIDR. recommend /27"
+    Default: "10.10.0.128/27"
+    Type: String
+  NATGWSubnetCIDR01:
+    Description: "NAT Gateway Subnet CIDR. recommend /28"
+    Default: "10.10.0.160/28"
+    Type: String
+  NATGWSubnetCIDR02:
+    Description: "NAT Gateway Subnet CIDR. recommend /28"
+    Default: "10.10.0.176/28"
+    Type: String
+  AmiSubnetCIDR:
+    Description: "Ami Instance Subnet CIDR. recommend /28"
+    Default: "10.10.0.192/28"
+    Type: String
+
+  # Passwords must be between 8 and 64 characters, not contain the word "admin", and include three of these four categories: lowercase, uppercase, numeric, and special characters.
+  SimpleADPW:
+    NoEcho: true
+    Description: Enter Password for Simple AD Admin. Passwords must be between 8 and 64 characters, not contain the word "admin", and include three of these four categories "lowercase", "uppercase", "numeric", and "special characters".
+    Default: "U!Path#AD18%@ssw0d"
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+#    AllowedPattern: ^[a-zA-Z0-9]*$
+  DirectoryName:
+    Description: FQDN such as "corp.example.com" for WorkSpaces
+    Default: "uipath-perm-ws.local"
+    Type: String
+  DirectoryShortName:
+    Description: "NetBIOS Name"
+    Default: "uipathpermanent"
+    Type: String
+  # AMI ID
+  ImageId: 
+    Description: "Template EC2 Image ID. ami-xxxxxxxx"
+    Type: "AWS::EC2::Image::Id"
+    ConstraintDescription: "must be the id of an existing AMI."
+    Default: ""
+  KeyName: 
+    Description: "Name of an existing EC2 KeyPair to enable SSH access to the instances"
+    Type: "AWS::EC2::KeyPair::KeyName"
+    ConstraintDescription: "must be the name of an existing EC2 KeyPair."
+  
+  # Elasticsearch
+  ESDomainName:
+    Description: "The name must start with a lowercase letter and must be between 3 and 28 characters. Valid characters are a-z (lowercase only), 0-9, and - (hyphen)."
+    Type: String
+    MinLength: 3
+    MaxLength: 28
+    AllowedPattern: "^[a-z0-9+-]*$"
+    Default: "uipath-permanent"
+  ESInstanceType:
+    Description: "Default : m4.large.elasticsearch, Minimum : t2.small.elasticsearch"
+    Default: "m4.large.elasticsearch"
+    Type: String
+  ESInstanceNumber:
+    Description: "Zone Awareness disabled. Number of the instance:1"
+    Default: "1"
+    Type: String
+
+  # RDS MS SQL
+  RDSInstanceIdentifier:
+    Description: "RDS Instance Identifier"
+    Default: "uipath-permdb"
+    Type: String    
+
+  RDSMasterUsername:
+    Description: "RDS Master User Name"
+    Type: String
+    MinLength: 8
+    MaxLength: 128
+    AllowedPattern: "^[a-zA-Z0-9]*$"
+    Default: "uipathdbuser"
+
+  RDSUserPassword:
+    NoEcho: true
+    Description: "RDS Master User Password"
+    Type: String
+    MinLength: 8
+    MaxLength: 128
+#    AllowedPattern: "^[a-z0-9+-]*$"
+    Default: "Ui6Path#db%as3w0rd"
+
+  RDSInstanceType:
+    Description: "Default : db.m4.xlarge, Minimum : db.m4.large"
+    Default: "db.m4.xlarge"
+    Type: String
+
+  CognitoUserPoolName:
+    Description: "Cognito User Pool Name for Kibana"
+    Default: "UipathPermanentUserPool"
+    Type: String
+  CognitoIdentityPoolName:
+    Description: "Cognito Identity Pool Name for Kibana"
+    Default: "UipathPermanentIdentityPool"
+    Type: String
+
+  UiPathPrivateHostedZone:
+    Description: "Route53 Private Hosted Zone for UiPath"
+    Default: uipath-perm-private.local
+    Type: String
+
+##########################################
+# Resources
+Resources:
+## VPC
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+#      CidrBlock: 10.10.0.0/16
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-VPC
+## InternetGateway
+  MyIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-IGW
+  AttachIGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref MyIGW
+## VPN Gateway
+  MyVPNGW:
+    Type: AWS::EC2::VPNGateway
+    Properties: 
+  #    AmazonSideAsn: Long
+      Type: ipsec.1
+      Tags:
+      - 
+        Key: Name
+        Value: UiPath-Permanent-VGW
+  AttachVGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties: 
+      VpcId: !Ref MyVPC
+      VpnGatewayId: !Ref MyVPNGW
+
+## EIP for NatGateway
+  EIPforNatGw1a:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+
+  MyNAT1a:
+    DependsOn: AttachIGW
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EIPforNatGw1a
+        - AllocationId
+      SubnetId:
+        Ref: NATGWSubnet01
+      Tags:
+        - Key: Name
+          Value: UiPath-Permanent-1a
+
+## Subnets
+  WorkSpacesSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.0/28
+      CidrBlock: !Ref WorkSpacesSubnet01CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1b
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-WorkSpaces-1a
+  WorkSpacesSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.16/28
+      CidrBlock: !Ref WorkSpacesSubnet02CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-WorkSpaces-1c
+  ELBSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.32/28
+      CidrBlock: !Ref ELBSubnet01CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1b
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-ELB-1a
+  ELBSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.48/28
+      CidrBlock: !Ref ELBSubnet02CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-ELB-1c
+  WebServerSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.64/28
+      CidrBlock: !Ref WebServerSubnet01CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1b
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-WebServer-1a
+  WebServerSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.80/28
+      CidrBlock: !Ref WebServerSubnet02CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-WebServer-1c
+  DataStoreSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.96/27
+      CidrBlock: !Ref DataStoreSubnet01CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1b
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-DataStore-1a
+  DataStoreSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.128/27
+      CidrBlock: !Ref DataStoreSubnet02CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-DataStore-1c
+  NATGWSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.160/28
+      CidrBlock: !Ref NATGWSubnetCIDR01
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: ap-northeast-1b
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-NATGateway-1a
+  NATGWSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.176/28
+      CidrBlock: !Ref NATGWSubnetCIDR02
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-NATGateway-1c
+  AmiSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.192/28
+      CidrBlock: !Ref AmiSubnetCIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1b
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-AMI-Managment-1a
+
+## RouteTable
+  MyRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-Internal-RT
+  AmiRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-Ami-RT
+  NATGWRouteTable01:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-NATGW01-RT
+  NATGWRouteTable02:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-NATGW02-RT
+  WorkSpacesWebServerTable01:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-WorkSpacesWebServer01-RT
+  WorkSpacesWebServerTable02:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-Permanent-WorkSpacesWebServer02-RT
+
+## Attache RouteTable
+  SubnetAttacheRTb01:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesWebServerTable01
+      SubnetId:
+        Ref: WorkSpacesSubnet01
+  SubnetAttacheRTb02:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesWebServerTable02
+      SubnetId:
+        Ref: WorkSpacesSubnet02
+  SubnetAttacheRTb03:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: MyRouteTable
+      SubnetId:
+        Ref: ELBSubnet01
+  SubnetAttacheRTb04:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: MyRouteTable
+      SubnetId:
+        Ref: ELBSubnet02
+  SubnetAttacheRTb05:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesWebServerTable01
+      SubnetId:
+        Ref: WebServerSubnet01
+  SubnetAttacheRTb06:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesWebServerTable02
+      SubnetId:
+        Ref: WebServerSubnet02
+  SubnetAttacheRTb07:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: MyRouteTable
+      SubnetId:
+        Ref: DataStoreSubnet01
+  SubnetAttacheRTb08:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: MyRouteTable
+      SubnetId:
+        Ref: DataStoreSubnet02
+  SubnetAttacheRTb09:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: AmiRouteTable
+      SubnetId:
+        Ref: AmiSubnet
+  SubnetAttacheRTb10:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: NATGWRouteTable01
+      SubnetId:
+        Ref: NATGWSubnet01
+  SubnetAttacheRTb11:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: NATGWRouteTable02
+      SubnetId:
+        Ref: NATGWSubnet02
+
+## Route
+  MyRoute01:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: AmiRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: MyNAT1a
+
+  MyRoute02:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: NATGWRouteTable01
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: MyIGW
+  
+  MyRoute03:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: NATGWRouteTable02
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: MyIGW
+        
+  # route For Workspaces
+  MyRoute04:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesWebServerTable01
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: MyNAT1a
+
+  MyRoute05:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesWebServerTable02
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+#        Ref: MyNAT1c
+        Ref: MyNAT1a
+
+# Security Group
+  # For EC2 in WebServer
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-permanent-webserver-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-permanent-webserver-sg
+      SecurityGroupIngress:
+
+      -
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        #        CidrIp: 10.10.0.0/23
+        CidrIp: !GetAtt MyVPC.CidrBlock
+
+      -
+        IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        #        CidrIp: 10.10.0.0/23
+        CidrIp: !GetAtt MyVPC.CidrBlock
+
+      # RDP From WorkSpaces
+      -
+        IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: !Ref WorkSpacesSubnet01CIDR
+      -
+        IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: !Ref WorkSpacesSubnet02CIDR
+
+  # For Amazon Elasticsearch Service
+  ElasticsearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-permanent-elasticsearch-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-permanent-elasticsearch-sg
+      SecurityGroupIngress:
+      # From WebServer Group
+      - 
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        SourceSecurityGroupId:
+          Ref: WebServerSecurityGroup
+      # From WorkSpaces
+      - 
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: !Ref WorkSpacesSubnet01CIDR
+      - 
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: !Ref WorkSpacesSubnet02CIDR
+
+  # For ElastiCache
+  ElastiCacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-permanent-elasticache-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-permanent-elasticache-sg
+      SecurityGroupIngress: 
+      # From EC2 for Redis
+      - 
+        IpProtocol: tcp
+        FromPort: '6379'
+        ToPort: '6379'
+        SourceSecurityGroupId:
+          Ref: WebServerSecurityGroup
+      # From AMI Managemnt Subnet
+      - 
+        IpProtocol: tcp
+        FromPort: '6379'
+        ToPort: '6379'
+        SourceSecurityGroupId:
+          Ref: AMISecurityGroup
+
+  # For RDS MSSQL Server
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-permanent-mssql-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-permanent-mssql-sg
+      SecurityGroupIngress:
+      # From webserver EC2
+      - 
+        IpProtocol: tcp
+        FromPort: '1433'
+        ToPort: '1433'
+        SourceSecurityGroupId:
+          Ref: WebServerSecurityGroup
+      # From AMI Subnet
+      - 
+        IpProtocol: tcp
+        FromPort: '1433'
+        ToPort: '1433'
+        SourceSecurityGroupId:
+          Ref: AMISecurityGroup
+
+  # For AMI Managed Instance
+  AMISecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-permanent-ami-managed-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-permanent-ami-managed-sg
+      SecurityGroupIngress:
+
+      -
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        #        CidrIp: 10.10.0.0/23
+        CidrIp: !GetAtt MyVPC.CidrBlock
+
+      -
+        IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        #        CidrIp: 10.10.0.0/23
+        CidrIp: !GetAtt MyVPC.CidrBlock
+
+      # RDP From WorkSpaces
+      - 
+        IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: !Ref WorkSpacesSubnet01CIDR
+      - 
+        IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: !Ref WorkSpacesSubnet02CIDR
+
+  # For File Server
+  FileServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-permanent-file-server-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-permanent-file-server-sg
+      SecurityGroupIngress:
+      # RDP From WorkSpaces
+      - 
+        IpProtocol: tcp
+        FromPort: '445'
+        ToPort: '445'
+        SourceSecurityGroupId:
+          Ref: WebServerSecurityGroup
+
+## Simple AD
+  MySimpleAd:
+    Type: AWS::DirectoryService::SimpleAD
+    Properties: 
+      Name: !Ref DirectoryName
+      Password: !Ref SimpleADPW
+#        Ref: SimpleADPW
+      ShortName: !Ref DirectoryShortName
+      Size: Small
+      VpcSettings: 
+        SubnetIds: 
+          - Ref: WorkSpacesSubnet01
+          - Ref: WorkSpacesSubnet02
+#          - Ref: subnetID1
+#          - Ref: subnetID2
+        VpcId: !Ref MyVPC
+#          Ref: vpcID
+
+## Create IAM Role for WebServer
+  Ec2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - arn:aws:iam::aws:policy/CloudWatchFullAccess
+
+## Create IAM Profile for WebServer
+  Ec2InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref Ec2Role
+
+# Route53 Private Hosted Zone
+  MyZone:
+    Type: "AWS::Route53::HostedZone"
+    Properties: 
+      HostedZoneConfig:
+          Comment: "Private Hosted Zone for UiPath Permanent Environment"
+      Name: !Ref UiPathPrivateHostedZone
+      VPCs:
+        - 
+          VPCId: !Ref MyVPC
+          VPCRegion: !Sub ${AWS::Region}
+
+# Route53 Record
+  # Default Records : xxx.uipath-perm-private.local
+  MyDNSRecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref MyZone
+      RecordSets:
+      # RDS CNAME
+      - Name: !Sub rds.${UiPathPrivateHostedZone}.
+        Type: CNAME
+        TTL: 300
+        ResourceRecords:
+        - !GetAtt RdsMsSql.Endpoint.Address
+
+      # Elasticsearch CNAME
+      - Name: !Sub elasticsearch.${UiPathPrivateHostedZone}.
+        Type: CNAME
+        TTL: 300
+        ResourceRecords:
+        - !GetAtt MyElasticsearch.DomainEndpoint
+
+# Elasticsearch on VPC
+  MyElasticsearch:
+    Type: AWS::Elasticsearch::Domain
+    Properties: 
+      AccessPolicies:
+        Version: 2012-10-17
+        Statement: 
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+            Action: 'es:*'
+            Resource: !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${ESDomainName}/*
+      DomainName: !Ref ESDomainName
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 100
+        VolumeType: gp2
+      ElasticsearchClusterConfig:
+        # If you enable zone awareness, you must have an even number of instances in the instance count.
+        # InstanceCount: 4
+        InstanceCount: !Ref ESInstanceNumber
+        InstanceType: !Ref ESInstanceType
+        ZoneAwarenessEnabled: false
+        DedicatedMasterEnabled: false
+      ElasticsearchVersion: 6.3
+      SnapshotOptions:
+        AutomatedSnapshotStartHour: 17
+      VPCOptions: 
+        SubnetIds:
+          - !Ref DataStoreSubnet01
+        SecurityGroupIds:
+          - !Ref ElasticsearchSecurityGroup
+
+## RDS MSSQL
+# IAM Role for RDS
+## Create IAM Role
+  RDSMonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - monitoring.rds.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+
+# RDS Subnet Group
+  RdsSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: "uipath permanent rds subnet group"
+      DBSubnetGroupName: uipath-permanent-subnet
+      SubnetIds:
+        - !Ref DataStoreSubnet01
+        - !Ref DataStoreSubnet02
+
+# RDS Option Group
+  RdsOptionGroup:
+    Type: "AWS::RDS::OptionGroup"
+    Properties: 
+      EngineName: sqlserver-se
+      MajorEngineVersion: "14.00"
+      OptionGroupDescription: "UiPath-permanent For Option Group. Engin is SQL Server Standard Edtion."
+#      OptionConfigurations:
+#        - OptionConfiguration
+
+# RDS Parameter group
+  RdsParameterGroup:
+    Type: "AWS::RDS::DBParameterGroup"
+    Properties: 
+      Description: "uipath-permanent-parameter"
+      Family: "sqlserver-se-14.0"
+#      Parameters:
+#        DBParameters
+
+# RDS MS SQL Server
+  RdsMsSql:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      #AllocatedStorage: 300
+      AllocatedStorage: 300
+      AllowMajorVersionUpgrade: false
+      AutoMinorVersionUpgrade: false
+      AvailabilityZone: !GetAtt DataStoreSubnet01.AvailabilityZone
+      BackupRetentionPeriod: 7
+      DBInstanceClass: !Ref RDSInstanceType
+      DBInstanceIdentifier: !Ref RDSInstanceIdentifier
+      DBParameterGroupName: !Ref RdsParameterGroup
+      DBSubnetGroupName: !Ref RdsSubnetGroup
+      # 要確誁E      Engine: sqlserver-se
+      EngineVersion: "14.00.3015.40.v1"
+      LicenseModel: license-included
+      MasterUsername: !Ref RDSMasterUsername
+      MasterUserPassword: !Ref RDSUserPassword
+      MonitoringInterval: 60
+      MonitoringRoleArn: !GetAtt RDSMonitoringRole.Arn
+#      MultiAZ: true
+      MultiAZ: false
+      OptionGroupName: !Ref RdsOptionGroup
+      PreferredBackupWindow: 17:00-17:30
+      PreferredMaintenanceWindow: Sun:18:00-Sun:18:30
+      PubliclyAccessible: false
+      StorageType: gp2
+#      Tags:
+#        Resource Tag
+      Timezone: "Tokyo Standard Time"
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+
+### Congnito ################################
+## Cognito User Pool
+  MyUserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName: !Ref CognitoUserPoolName
+
+## Cognito Identity Pool
+  MyIdentityPool:
+    Type: "AWS::Cognito::IdentityPool"
+    Properties:
+      IdentityPoolName: !Ref CognitoIdentityPoolName
+      AllowUnauthenticatedIdentities: true
+
+# Unauth policy      
+  UnauthenticatedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action:
+          - mobileanalytics:PutEvents
+          - cognito-sync:*
+          Resource:
+          - "*"
+  UnauthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action: "sts:AssumeRoleWithWebIdentity"
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Condition:
+            StringEquals:
+              "cognito-identity.amazonaws.com:aud":
+                Ref: MyIdentityPool
+            ForAnyValue:StringLike:
+              "cognito-identity.amazonaws.com:amr": unauthenticated
+      ManagedPolicyArns:
+      - Ref: UnauthenticatedPolicy
+      
+# Auth policy      
+  AuthenticatedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action:
+          - mobileanalytics:PutEvents
+          - cognito-sync:*
+          - cognito-identity:*
+          Resource:
+          - "*"
+  AuthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action: "sts:AssumeRoleWithWebIdentity"
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Condition:
+            StringEquals:
+              "cognito-identity.amazonaws.com:aud":
+                Ref: MyIdentityPool
+            ForAnyValue:StringLike:
+              "cognito-identity.amazonaws.com:amr": authenticated
+      ManagedPolicyArns:
+      - Ref: AuthenticatedPolicy
+
+# ES auth IAM Role
+  ESAuthPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties: 
+      PolicyName: "EsHttpdAccess"
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Action: 
+                - "es:ESHttpHead"
+                - "es:ESHttpPost"
+                - "es:ESHttpGet"
+                - "es:ESHttpDelete"
+                - "es:ESHttpPut"
+            Resource: "*"
+      Roles: 
+        - 
+          Ref: "AuthenticatedRole"
+
+# ES unauth IAM Role
+  ESUnAuthPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties: 
+      PolicyName: "EsHttpdAccess"
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Action: 
+                - "es:ESHttpHead"
+                - "es:ESHttpPost"
+                - "es:ESHttpGet"
+                - "es:ESHttpDelete"
+                - "es:ESHttpPut"
+            Resource: "*"
+      Roles: 
+        - 
+          Ref: "UnauthenticatedRole"
+
+  MyIdentityPoolRoleAttachment:
+    Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+    Properties:
+      IdentityPoolId: !Ref MyIdentityPool
+#      RoleMappings: 
+#        String to RoleMapping object map
+      Roles: 
+        unauthenticated:
+          Fn::GetAtt:
+          - UnauthenticatedRole
+          - Arn
+        authenticated:
+          Fn::GetAtt:
+          - AuthenticatedRole
+          - Arn
+      
+#############################################
+
+## Output
+Outputs:
+  VPC:
+    Description: "VPC ID"
+    Value: !Ref MyVPC
+  VPCCIDR:
+    Description: "VPC CIDR"
+    Value: !GetAtt MyVPC.CidrBlock
+  SimpleAD:
+    Description: "Directory ID"
+    Value: !Ref MySimpleAd
+  SimpleADPassword:
+    Description: "Administrator Password for Simple AD"
+    Value: !Ref SimpleADPW
+  SimpleADDnsIpAddresses:
+    Description: "SimpleAD DNS IP addresses"
+    Value: !Join [ ",", !GetAtt MySimpleAd.DnsIpAddresses ]
+  NATGateway01: 
+    Description: "NAT Gateway ID on ap-northeast-1b"
+    Value: !Ref MyNAT1a
+  EIPforNAT01:
+    Description: "Elastic IP for Nat Gateway on ap-northeast-1b"
+    Value: !Ref EIPforNatGw1a
+  EIPID01:
+    Description: "Allocation ID for Elastic IP of NatGateway on ap-northeast-1b"
+    Value: !GetAtt EIPforNatGw1a.AllocationId
+  ElasticsearchEndPoint:
+    Description: "Elasticsearch Endpoint"
+    Value: !GetAtt MyElasticsearch.DomainEndpoint
+  RDSEndPoint:
+    Description: "RDS End Point"
+    Value: !GetAtt RdsMsSql.Endpoint.Address
+  PrivateHostedZone:
+    Description: "Route53 Private Hosted Zone Name For ELB End Point"
+    Value: !Ref UiPathPrivateHostedZone
+  CognitoUserPoolName:
+    Description: "Cognito User Pool Name for Kibana"
+    Value: !Ref CognitoUserPoolName
+  CognitoIdentityPoolName:
+    Description: "Cognito Identity Pool Name for Kibana"
+    Value: !Ref CognitoIdentityPoolName
+  ElbOriginalDnsName:
+    Description: "Original DNS Name for ELB"
+    Value: !Sub app.${UiPathPrivateHostedZone}
+  RdsOriginalDnsName:
+    Description: "Original DNS Name for RDS"
+    Value: !Sub rds.${UiPathPrivateHostedZone}
+  ElasticsearchOriginalDnsName:
+    Description: "Original DNS Name for Elasticsearch"
+    Value: !Sub elasticsearch.${UiPathPrivateHostedZone}
