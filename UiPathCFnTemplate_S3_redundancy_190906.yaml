@@ -1,0 +1,1420 @@
+---
+# For UiPath jpdx-test Environment With DirectConnect
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFromation Template for UiPath JPDX-Test Environment
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: VPC CIDRs
+      Parameters:
+      - VPCCIDR
+      - WorkSpacesSubnet01CIDR
+      - WorkSpacesSubnet02CIDR
+      - ELBSubnet01CIDR
+      - ELBSubnet02CIDR
+      - AutoScalingSubnet01CIDR
+      - AutoScalingSubnet02CIDR
+      - DataStoreSubnet01CIDR
+      - DataStoreSubnet02CIDR
+      - NATGWSubnetCIDR01
+      - NATGWSubnetCIDR02
+      - AmiSubnetCIDR
+    - Label:
+        default: AutoScaling Instances
+      Parameters:
+      - AutoScalingMin
+      - AutoScalingMax
+      - DesiredNum
+      - Ec2InstanceType
+    - Label:
+        default: Elasticsearch
+      Parameters:
+      - ESDomainName
+      - ESInstanceType
+      - ESInstanceNumber
+      - ESDedicatedMasterType
+    - Label:
+        default: ElastiCache Redis
+      Parameters:
+      - ECInstanceType
+    - Label:
+        default: RDS SQL Server
+      Parameters:
+      - RDSInstanceIdentifier
+      - RDSMasterUsername
+      - RDSUserPassword
+      - RDSInstanceType
+    - Label:
+        default: Directory Service for WorkSpaces
+      Parameters:
+      - DirectoryName
+      - DirectoryShortName
+      - SimpleADPW
+    - Label:
+        default: Route53 Private Hosted Zone
+      Parameters:
+      - UiPathPrivateHostedZone
+      - UiPathELBRecord
+    - Label:
+        default: Cognito
+      Parameters:
+      - CognitoUserPoolName
+      - CognitoIdentityPoolName
+
+    ParameterLabels:
+      VPCCIDR:
+        default: "VPC CIDR"
+      WorkSpacesSubnet01CIDR:
+        default: "WorkSpaces Subnet01 CIDR"
+      WorkSpacesSubnet02CIDR:
+        default: "WorkSpaces Subnet02 CIDR"
+      ELBSubnet01CIDR:
+        default: "Elastic Load Balarncer Subnet01 CIDR"
+      ELBSubnet02CIDR:
+        default: "Elastic Load Balarncer Subnet02 CIDR"
+      AutoScalingSubnet01CIDR:
+        default: "AutoScaling Subnet01 CIDR"
+      AutoScalingSubnet02CIDR:
+        default: "AutoScaling Subnet02 CIDR"
+      DataStoreSubnet01CIDR:
+        default: "DataStore Subnet01 CIDR"
+      DataStoreSubnet02CIDR:
+        default: "DataStore Subnet02 CIDR"
+      NATGWSubnetCIDR01:
+        default: "NAT Gateway Subnet01 CIDR"
+      NATGWSubnetCIDR02:
+        default: "NAT Gateway Subnet02 CIDR"
+      AmiSubnetCIDR:
+        default: "AMI Instance Subnet CIDR"
+      ESDomainName:
+        default: "Elasticsearch Domain Name"
+      ESInstanceType:
+        default: "Elasticsearch Instance Type"
+      ESInstanceNumber:
+        default: "Number of Elasticsearch Instance"
+      ESDedicatedMasterType:
+        default: "Type of Dedicated Master Instances"
+      RDSMasterUsername:
+        default: "RDS Master User Name"
+      RDSUserPassword:
+        default: "RDS User Password"
+      RDSInstanceType:
+        default: "RDS Instance Type"
+      RDSInstanceIdentifier:
+        default: "RDS Instance Identifier"
+      DirectoryName:
+        default: "Directory Name"
+      DirectoryShortName:
+        default: "Directory Short Name"
+      SimpleADPW:
+        default: "Simple AD Admin Password"
+      UiPathPrivateHostedZone:
+        default: "Private Hosted Zone for UiPath"
+      UiPathELBRecord:
+        default: "DNS Name for Elastic Load Balancer"
+      CognitoUserPoolName:
+        default: "Cognito User Pool Name"
+      CognitoIdentityPoolName:
+        default: "Cognito Identity Pool Name"
+      AutoScalingMin:
+        default: "Number of AutoScaling Min Instances"
+      AutoScalingMax:
+        default: "Number of AutoScaling Max Instances"
+      DesiredNum:
+        default: "Number of AutoScaling Desired Instances"
+      Ec2InstanceType:
+        default: "Instance Type of AutoScaling Instances"
+      ECInstanceType:
+        default: "ElastiCache Instance Type"
+
+Parameters:
+  # VPC and subnet CIDRs
+  VPCCIDR:
+    Description: "VPC CIDR.recommend /16"
+    Default: "10.10.0.0/16"
+    Type: String
+  WorkSpacesSubnet01CIDR:
+    Description: "WorkSpaces Subnet01 CIDR. recommend /24"
+    Default: "10.10.0.0/24"
+    Type: String
+  WorkSpacesSubnet02CIDR:
+    Description: "WorkSpaces Subnet02 CIDR. recommend /24"
+    Default: "10.10.1.0/24"
+    Type: String
+  ELBSubnet01CIDR:
+    Description: "Network Load Balarncer Subnet01 CIDR. recommend /24"
+    Default: "10.10.2.0/24"
+    Type: String
+  ELBSubnet02CIDR:
+    Description: "Network Load Balarncer Subnet02 CIDR. recommend /24"
+    Default: "10.10.3.0/24"
+    Type: String
+  AutoScalingSubnet01CIDR:
+    Description: "AutoScaling Subnet01 CIDR. recommend /24"
+    Default: "10.10.4.0/24"
+    Type: String
+  AutoScalingSubnet02CIDR:
+    Description: "AutoScaling Subnet02 CIDR. recommend /24"
+    Default: "10.10.5.0/24"
+    Type: String
+  DataStoreSubnet01CIDR:
+    Description: "Data Store Subnet01 CIDR. recommend /24"
+    Default: "10.10.6.0/24"
+    Type: String
+  DataStoreSubnet02CIDR:
+    Description: "Data Store Subnet02 CIDR. recommend /24"
+    Default: "10.10.7.0/24"
+    Type: String
+  NATGWSubnetCIDR01:
+    Description: "NAT Gateway Subnet CIDR. recommend /24"
+    Default: "10.10.8.0/24"
+    Type: String
+  NATGWSubnetCIDR02:
+    Description: "NAT Gateway Subnet CIDR. recommend /24"
+    Default: "10.10.9.0/24"
+    Type: String
+  AmiSubnetCIDR:
+    Description: "Ami Instance Subnet CIDR. recommend /24"
+    Default: "10.10.10.0/24"
+    Type: String
+
+  # Passwords must be between 8 and 64 characters, not contain the word "admin", and include three of these four categories: lowercase, uppercase, numeric, and special characters.
+  SimpleADPW:
+    NoEcho: true
+    Description: Enter Password for Simple AD Admin. Passwords must be between 8 and 64 characters, not contain the word "admin", and include three of these four categories "lowercase", "uppercase", "numeric", and "special characters".
+    Default: "U!Path#AD18%@ssw0d"
+    Type: String
+    MinLength: 8
+    MaxLength: 64
+#    AllowedPattern: ^[a-zA-Z0-9]*$
+  DirectoryName:
+    Description: FQDN such as "corp.example.com" for WorkSpaces
+    Default: "uipath-jpdxtest-ws.local"
+    Type: String
+  DirectoryShortName:
+    Description: "NetBIOS Name"
+    Default: "uipathjpdxtest"
+    Type: String
+  # AMI ID
+  ImageId: 
+    Description: "Template EC2 Image ID. ami-xxxxxxxx"
+    Type: "AWS::EC2::Image::Id"
+    ConstraintDescription: "must be the id of an existing AMI."
+    Default: ""
+  KeyName: 
+    Description: "Name of an existing EC2 KeyPair to enable SSH access to the instances"
+    Type: "AWS::EC2::KeyPair::KeyName"
+    ConstraintDescription: "must be the name of an existing EC2 KeyPair."
+  
+  # Elasticsearch
+  ESDomainName:
+    Description: "The name must start with a lowercase letter and must be between 3 and 28 characters. Valid characters are a-z (lowercase only), 0-9, and - (hyphen)."
+    Type: String
+    MinLength: 3
+    MaxLength: 28
+    AllowedPattern: "^[a-z0-9+-]*$"
+    Default: "uipath-jpdxtest"
+  ESInstanceType:
+    Description: "Default : m4.large.elasticsearch, Minimum : t2.small.elasticsearch"
+    Default: "t2.small.elasticsearch"
+    Type: String
+  ESInstanceNumber:
+    Description: "Zone Awareness enabled. Max:4, Min:2"
+    Default: "2"
+    Type: String
+  ESDedicatedMasterType:
+      Description: "Dedicated Master Instance Type. Minimum Recommended : m3.medium.elasticsearch"
+      Default: "t2.small.elasticsearch"
+      Type: String
+
+  # ElastiCache
+  ECInstanceType:
+    Description: "Default : cache.m4.large, Minimum : cache.m3.medium"
+    Default: "cache.m3.medium"
+    Type: String
+
+  # RDS MS SQL
+  RDSInstanceIdentifier:
+    Description: "RDS Instance Identifier"
+    Default: "uipath-jpdxtestdb"
+    Type: String    
+
+  RDSMasterUsername:
+    Description: "RDS Master User Name"
+    Type: String
+    MinLength: 8
+    MaxLength: 128
+    AllowedPattern: "^[a-zA-Z0-9]*$"
+    Default: "uipathdbuser"
+
+  RDSUserPassword:
+    NoEcho: true
+    Description: "RDS Master User Password"
+    Type: String
+    MinLength: 8
+    MaxLength: 128
+#    AllowedPattern: "^[a-z0-9+-]*$"
+    Default: "Ui6Path#db%as3w0rd"
+
+  RDSInstanceType:
+    Description: "Default : db.m4.xlarge, Minimum : db.m4.large"
+    Default: "db.m4.large"
+    Type: String
+
+  CognitoUserPoolName:
+    Description: "Cognito User Pool Name for Kibana"
+    Default: "Uipathjpdx-testUserPool"
+    Type: String
+  CognitoIdentityPoolName:
+    Description: "Cognito Identity Pool Name for Kibana"
+    Default: "UipathjpdxtestIdentityPool"
+    Type: String
+
+  AutoScalingMin:
+    Description: "Number of AutoScaling Min Instances"
+    Default: 0
+    Type: String
+
+  AutoScalingMax:
+    Description: "Number of AutoScaling Max Instances"
+    Default: 0
+    Type: String
+
+  DesiredNum:
+    Description: "Number of Desired Instances"
+    Default: 0
+    Type: String
+
+  Ec2InstanceType:
+    Description: "Instance Type of AutoScaing Instances"
+    Default: c5.xlarge
+    Type: String
+
+  UiPathPrivateHostedZone:
+    Description: "Route53 Private Hosted Zone for UiPath"
+    Default: uipath-jpdxtest-private.local
+    Type: String
+
+  UiPathELBRecord:
+    Description: "DNS Name for Network Load Balancer"
+    Default: app
+    Type: String
+
+##########################################
+# Resources
+Resources:
+## VPC
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+#      CidrBlock: 10.10.0.0/16
+      CidrBlock: !Ref VPCCIDR
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-VPC
+## InternetGateway
+  MyIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-IGW
+  AttachIGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref MyIGW
+## VPN Gateway
+  MyVPNGW:
+    Type: AWS::EC2::VPNGateway
+    Properties: 
+  #    AmazonSideAsn: Long
+      Type: ipsec.1
+      Tags:
+      - 
+        Key: Name
+        Value: UiPath-jpdx-test-VGW
+  AttachVGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref MyVPC
+      VpnGatewayId: !Ref MyVPNGW
+
+## EIP for NatGateway
+  EIPforNatGw1a:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+  EIPforNatGw1c:
+    Type: "AWS::EC2::EIP"
+    Properties:
+      Domain: vpc
+
+  MyNAT1a:
+    DependsOn: AttachIGW
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EIPforNatGw1a
+        - AllocationId
+      SubnetId:
+        Ref: NATGWSubnet01
+      Tags:
+        - Key: Name
+          Value: UiPath-jpdx-test-1a
+  MyNAT1c:
+    DependsOn: AttachIGW
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - EIPforNatGw1c
+        - AllocationId
+      SubnetId:
+        Ref: NATGWSubnet02
+      Tags:
+        - Key: Name
+          Value: UiPath-jpdx-test-1c
+
+## ELB(NLB)
+  MyELB:
+    Type: "AWS::ElasticLoadBalancingV2::LoadBalancer"
+    Properties:
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: true
+      Name: uipath-jpdxtest
+      Scheme: internal
+      Subnets:
+        - Ref: ELBSubnet01
+        - Ref: ELBSubnet02
+      Tags:
+        - Key: Name
+          Value: uipath-jpdxtest-nlb
+      Type: network
+      # IpAddressType: ipv4 or dualstack (default:ipv4)
+      IpAddressType: ipv4
+
+## ELB Target Group(NLB)
+  MyELBTargetGroup:
+    Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+    Properties:
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /api/status
+      HealthCheckPort: traffic-port
+      HealthCheckProtocol: HTTPS
+      HealthCheckTimeoutSeconds: 10
+      HealthyThresholdCount: 3
+      Matcher:
+        HttpCode: 200-399
+      Name: uipath-jpdxtest-target-group
+      Port: 443
+      Protocol: TCP
+      Tags:
+        - Key: Name
+          Value: UiPathNlbTargetGroup
+      TargetType: instance
+      UnhealthyThresholdCount: 3
+      VpcId:
+        Ref: MyVPC
+
+## ELB Listner(NLB)
+  ELBListenerHTTP:
+    Type: "AWS::ElasticLoadBalancingV2::Listener"
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref 'MyELBTargetGroup'
+      LoadBalancerArn: !Ref MyELB
+      Port: 443
+      Protocol: TCP
+
+## Subnets
+  WorkSpacesSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.0.0/24
+      CidrBlock: !Ref WorkSpacesSubnet01CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1a
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-WorkSpaces-1a
+  WorkSpacesSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.1.0/24
+      CidrBlock: !Ref WorkSpacesSubnet02CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-WorkSpaces-1c
+  ELBSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.2.0/24
+      CidrBlock: !Ref ELBSubnet01CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1a
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-ELB-1a
+  ELBSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.3.0/24
+      CidrBlock: !Ref ELBSubnet02CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-ELB-1c
+  AutoScalingSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.4.0/24
+      CidrBlock: !Ref AutoScalingSubnet01CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1a
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-AutoScaling-1a
+  AutoScalingSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.5.0/24
+      CidrBlock: !Ref AutoScalingSubnet02CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-AutoScaling-1c
+  DataStoreSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.6.0/24
+      CidrBlock: !Ref DataStoreSubnet01CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1a
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-DataStore-1a
+  DataStoreSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.7.0/24
+      CidrBlock: !Ref DataStoreSubnet02CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-DataStore-1c
+  NATGWSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.8.0/24
+      CidrBlock: !Ref NATGWSubnetCIDR01
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: ap-northeast-1a
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-NATGateway-1a
+  NATGWSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.9.0/24
+      CidrBlock: !Ref NATGWSubnetCIDR02
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-NATGateway-1c
+  AmiSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.10.10.0/24
+      CidrBlock: !Ref AmiSubnetCIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1a
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-AMI-Managment-1a
+
+## RouteTable
+  MyRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-Internal-RT
+  AmiRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-Ami-RT
+  NATGWRouteTable01:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-NATGW01-RT
+  NATGWRouteTable02:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-NATGW02-RT
+  WorkSpacesAutoScalingTable01:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-WorkSpacesAutoScaling01-RT
+  WorkSpacesAutoScalingTable02:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: UiPath-jpdx-test-WorkSpacesAutoScaling02-RT
+
+## Attache RouteTable
+  SubnetAttacheRTb01:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesAutoScalingTable01
+      SubnetId:
+        Ref: WorkSpacesSubnet01
+  SubnetAttacheRTb02:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesAutoScalingTable02
+      SubnetId:
+        Ref: WorkSpacesSubnet02
+  SubnetAttacheRTb03:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: MyRouteTable
+      SubnetId:
+        Ref: ELBSubnet01
+  SubnetAttacheRTb04:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: MyRouteTable
+      SubnetId:
+        Ref: ELBSubnet02
+  SubnetAttacheRTb05:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesAutoScalingTable01
+      SubnetId:
+        Ref: AutoScalingSubnet01
+  SubnetAttacheRTb06:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesAutoScalingTable02
+      SubnetId:
+        Ref: AutoScalingSubnet02
+  SubnetAttacheRTb07:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: MyRouteTable
+      SubnetId:
+        Ref: DataStoreSubnet01
+  SubnetAttacheRTb08:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: MyRouteTable
+      SubnetId:
+        Ref: DataStoreSubnet02
+  SubnetAttacheRTb09:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: AmiRouteTable
+      SubnetId:
+        Ref: AmiSubnet
+  SubnetAttacheRTb10:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: NATGWRouteTable01
+      SubnetId:
+        Ref: NATGWSubnet01
+  SubnetAttacheRTb11:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: NATGWRouteTable02
+      SubnetId:
+        Ref: NATGWSubnet02
+
+## Route
+  MyRoute01:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: AmiRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: MyNAT1a
+
+  MyRoute02:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: NATGWRouteTable01
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: MyIGW
+  
+  MyRoute03:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: NATGWRouteTable02
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: MyIGW
+
+  # route For Workspaces
+  MyRoute04:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesAutoScalingTable01
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: MyNAT1a
+
+  MyRoute05:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: WorkSpacesAutoScalingTable02
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: MyNAT1c
+
+  # For EC2 in AutoScaling
+  AutoScalingSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-jpdxtest-autoscaling-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-jpdxtest-autoscaling-sg
+      SecurityGroupIngress:
+      -
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        #        CidrIp: 10.10.0.0/23
+        CidrIp: !GetAtt MyVPC.CidrBlock
+
+      -
+        IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        #        CidrIp: 10.10.0.0/23
+        CidrIp: !GetAtt MyVPC.CidrBlock
+
+      # RDP From WorkSpaces
+      -
+        IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: !Ref WorkSpacesSubnet01CIDR
+      -
+        IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: !Ref WorkSpacesSubnet02CIDR
+
+  # For Amazon Elasticsearch Service
+  ElasticsearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-jpdxtest-elasticsearch-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-jpdxtest-elasticsearch-sg
+      SecurityGroupIngress:
+      # From AutoScaling Group
+      - 
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        SourceSecurityGroupId:
+          Ref: AutoScalingSecurityGroup
+      # From WorkSpaces
+      - 
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: !Ref WorkSpacesSubnet01CIDR
+      - 
+        IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: !Ref WorkSpacesSubnet02CIDR
+
+  # For ElastiCache
+  ElastiCacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-jpdxtest-elasticache-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-jpdxtest-elasticache-sg
+      SecurityGroupIngress: 
+      # From EC2 for Redis
+      - 
+        IpProtocol: tcp
+        FromPort: '6379'
+        ToPort: '6379'
+        SourceSecurityGroupId:
+          Ref: AutoScalingSecurityGroup
+      # From AMI Managemnt Subnet
+      - 
+        IpProtocol: tcp
+        FromPort: '6379'
+        ToPort: '6379'
+        SourceSecurityGroupId:
+          Ref: AMISecurityGroup
+
+  # For RDS MSSQL Server
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-jpdxtest-mssql-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-jpdxtest-mssql-sg
+      SecurityGroupIngress:
+      # From AutoScailing EC2
+      - 
+        IpProtocol: tcp
+        FromPort: '1433'
+        ToPort: '1433'
+        SourceSecurityGroupId:
+          Ref: AutoScalingSecurityGroup
+      # From AMI Subnet
+      - 
+        IpProtocol: tcp
+        FromPort: '1433'
+        ToPort: '1433'
+        SourceSecurityGroupId:
+          Ref: AMISecurityGroup
+
+  # For AMI Managed Instance
+  AMISecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-jpdxtest-ami-managed-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-jpdxtest-ami-managed-sg
+      SecurityGroupIngress:
+      # RDP From WorkSpaces
+      - 
+        IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: !Ref WorkSpacesSubnet01CIDR
+      - 
+        IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: !Ref WorkSpacesSubnet02CIDR
+
+  # For File Server
+  FileServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: uipath-jpdxtest-file-server-sg
+      VpcId:
+        Ref: MyVPC
+      Tags:
+      - Key: Name
+        Value: uipath-jpdxtest-file-server-sg
+      SecurityGroupIngress:
+      # RDP From WorkSpaces
+      - 
+        IpProtocol: tcp
+        FromPort: '445'
+        ToPort: '445'
+        SourceSecurityGroupId:
+          Ref: AutoScalingSecurityGroup
+
+## Simple AD
+  MySimpleAd:
+    Type: AWS::DirectoryService::SimpleAD
+    Properties: 
+      Name: !Ref DirectoryName
+      Password: !Ref SimpleADPW
+#        Ref: SimpleADPW
+      ShortName: !Ref DirectoryShortName
+      Size: Small
+      VpcSettings: 
+        SubnetIds: 
+          - Ref: WorkSpacesSubnet01
+          - Ref: WorkSpacesSubnet02
+#          - Ref: subnetID1
+#          - Ref: subnetID2
+        VpcId: !Ref MyVPC
+#          Ref: vpcID
+
+## Create IAM Role for AutoScaling
+  Ec2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - arn:aws:iam::aws:policy/CloudWatchFullAccess
+
+## Create IAM Profile for AutoScaling
+  Ec2InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref Ec2Role
+
+## AutoScaling
+  MyAutoScalingGroup:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      AutoScalingGroupName: UiPath-jpdx-test-WebServerGroup
+  #    Cooldown: 300
+      DesiredCapacity: !Ref DesiredNum
+      HealthCheckGracePeriod: 300
+      HealthCheckType: ELB
+      LaunchConfigurationName:
+        Ref: LaunchConfig
+      MaxSize: !Ref AutoScalingMax
+      MinSize: !Ref AutoScalingMin
+      Tags:
+        - Key: Name
+          Value: UiPath-jpdx-test
+          PropagateAtLaunch: true
+      TargetGroupARNs:
+        - !Ref MyELBTargetGroup
+      VPCZoneIdentifier:
+        - Ref: AutoScalingSubnet01
+        - Ref: AutoScalingSubnet02
+
+## LaunchConfig
+  LaunchConfig:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      AssociatePublicIpAddress: false
+      IamInstanceProfile: !Ref Ec2InstanceProfile
+      ImageId: !Ref ImageId
+#      InstanceMonitoring: true # Default: true
+      InstanceType: !Ref Ec2InstanceType
+      KeyName: !Ref KeyName
+      SecurityGroups:
+        - Ref: AutoScalingSecurityGroup
+#      UserData: String
+
+# Route53 Private Hosted Zone
+  MyZone:
+    Type: "AWS::Route53::HostedZone"
+    Properties:
+      HostedZoneConfig:
+          Comment: "Private Hosted Zone for UiPath jpdx-test Environment"
+      Name: !Ref UiPathPrivateHostedZone
+      VPCs:
+        -
+          VPCId: !Ref MyVPC
+          VPCRegion: !Sub ${AWS::Region}
+
+# Route53 Record
+  # Default Records : xxx.uipath-jpdxtest-private.local
+  MyDNSRecord:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref MyZone
+      RecordSets:
+      # ELB CNAME (Default : app.uipath-jpdxtest-private.local)
+      - Name: !Sub app.${UiPathPrivateHostedZone}.
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt MyELB.CanonicalHostedZoneID
+          DNSName: !GetAtt MyELB.DNSName
+      # RDS CNAME
+      - Name: !Sub rds.${UiPathPrivateHostedZone}.
+        Type: CNAME
+        TTL: 300
+        ResourceRecords:
+        - !GetAtt RdsMsSql.Endpoint.Address
+
+      # Elasticache CNAME
+      - Name: !Sub redis.${UiPathPrivateHostedZone}.
+        Type: CNAME
+        TTL: 300
+        ResourceRecords:
+        - !GetAtt MyElastiCache.PrimaryEndPoint.Address
+
+      # Elasticsearch CNAME
+      - Name: !Sub elasticsearch.${UiPathPrivateHostedZone}.
+        Type: CNAME
+        TTL: 300
+        ResourceRecords:
+        - !GetAtt MyElasticsearch.DomainEndpoint
+
+# Elasticsearch on VPC
+  MyElasticsearch:
+    Type: AWS::Elasticsearch::Domain
+    Properties:
+      AccessPolicies:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+            Action: 'es:*'
+            Resource: !Sub arn:aws:es:${AWS::Region}:${AWS::AccountId}:domain/${ESDomainName}/*
+      DomainName: !Ref ESDomainName
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 35
+        VolumeType: gp2
+      ElasticsearchClusterConfig:
+        # If you enable zone awareness, you must have an even number of instances in the instance count.
+        # InstanceCount: 4
+        InstanceCount: !Ref ESInstanceNumber
+        InstanceType: !Ref ESInstanceType
+        ZoneAwarenessEnabled: true
+        DedicatedMasterEnabled: true
+        DedicatedMasterType: !Ref ESDedicatedMasterType
+        DedicatedMasterCount: 3
+      ElasticsearchVersion: 6.7
+      SnapshotOptions:
+        AutomatedSnapshotStartHour: 17
+      VPCOptions:
+        SubnetIds:
+          - !Ref DataStoreSubnet01
+          - !Ref DataStoreSubnet02
+        SecurityGroupIds:
+          - !Ref ElasticsearchSecurityGroup
+
+# ElastiCache Redis Parameter Group
+  MyElastiCacheRedisParameterGroup:
+    Type: "AWS::ElastiCache::ParameterGroup"
+    Properties:
+      CacheParameterGroupFamily: "redis4.0"
+      Description: "uipath jpdxtest environment parameter group"
+#      Properties:
+#        String: String
+
+# ElastiCache Redis Subnet Group
+  MyElastiCascheRedisSubnetGroup:
+    Type: "AWS::ElastiCache::SubnetGroup"
+    Properties:
+      CacheSubnetGroupName: uipath-jpdxtest-subnet-group
+      Description: "UiPath jpdx-test Environment Subnet Group"
+      SubnetIds:
+        - !Ref DataStoreSubnet01
+        - !Ref DataStoreSubnet02
+
+# ElastiCache Redis on VPC
+  MyElastiCache:
+    Type: "AWS::ElastiCache::ReplicationGroup"
+    Properties:
+      AtRestEncryptionEnabled: false
+      AutomaticFailoverEnabled: true
+      CacheNodeType: !Ref ECInstanceType
+      CacheParameterGroupName: !Ref MyElastiCacheRedisParameterGroup
+      CacheSubnetGroupName: !Ref MyElastiCascheRedisSubnetGroup
+      Engine: Redis
+      EngineVersion: 4.0.10
+      NodeGroupConfiguration:
+        - PrimaryAvailabilityZone: ap-northeast-1a
+          ReplicaAvailabilityZones:
+            - ap-northeast-1a
+            - ap-northeast-1c
+          ReplicaCount: 2
+#          Slots: String
+#      NotificationTopicArn: String
+      Port: 6379
+      # Either PreferredCacheClusterAZs or PrimaryAvailabilityZone and ReplicaAvailabilityZones must be specified. 
+      # 縲訓rimaryAvailabilityZone 縺ｨ ReplicaAvailabilityZones縲阪ｒ謖・ｮ壹＠縺ｦ繧句ｴ蜷医・菴ｿ縺医↑縺・#      PreferredCacheClusterAZs:
+#        - ap-northeast-1a
+#        - ap-northeast-1c
+      PreferredMaintenanceWindow: sun:17:00-sun:18:00
+      ReplicationGroupDescription: "Redis Cluster for UiPath (No Cluster mode)"
+      ReplicationGroupId: uipath-jpdxtest
+      SecurityGroupIds:
+        - !Ref ElastiCacheSecurityGroup
+      # AutoBackup
+      SnapshotRetentionLimit: 7
+      SnapshotWindow: 16:00-17:00
+#      Tags
+#        - Resource Tag
+#      TransitEncryptionEnabled: Boolean
+
+## RDS MSSQL
+# IAM Roleﾂfor RDS
+## Create IAM Role
+  RDSMonitoringRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - monitoring.rds.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
+
+# RDS Subnet Group
+  RdsSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    Properties: 
+      DBSubnetGroupDescription: "uipath jpdxtest rds subnet group"
+      DBSubnetGroupName: uipath-jpdxtest-subnet
+      SubnetIds:
+        - !Ref DataStoreSubnet01
+        - !Ref DataStoreSubnet02
+
+# RDS Option Group
+  RdsOptionGroup:
+    Type: "AWS::RDS::OptionGroup"
+    Properties:
+      EngineName: sqlserver-se
+      MajorEngineVersion: "14.00"
+      OptionGroupDescription: "UiPath-jpdxtest For Option Group. Engin is SQL Server Standard Edtion."
+#      OptionConfigurations:
+#        - OptionConfiguration
+
+# RDS Parameter group
+  RdsParameterGroup:
+    Type: "AWS::RDS::DBParameterGroup"
+    Properties: 
+      Description: "uipath-jpdxtest-parameter"
+      Family: "sqlserver-se-14.0"
+#      Parameters:
+#        DBParameters
+
+# RDS MS SQL Server
+  RdsMsSql:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      #AllocatedStorage: 300
+      AllocatedStorage: 300
+      AllowMajorVersionUpgrade: false
+      AutoMinorVersionUpgrade: false
+      BackupRetentionPeriod: 7
+      DBInstanceClass: !Ref RDSInstanceType
+      DBInstanceIdentifier: !Ref RDSInstanceIdentifier
+      DBParameterGroupName: !Ref RdsParameterGroup
+      DBSubnetGroupName: !Ref RdsSubnetGroup
+      # 隕∫｢ｺ隱・      Engine: sqlserver-se
+      EngineVersion: "14.00.3015.40.v1"
+      LicenseModel: license-included
+      MasterUsername: !Ref RDSMasterUsername
+      MasterUserPassword: !Ref RDSUserPassword
+      MonitoringInterval: 60
+      MonitoringRoleArn: !GetAtt RDSMonitoringRole.Arn
+      MultiAZ: true
+      OptionGroupName: !Ref RdsOptionGroup
+      PreferredBackupWindow: 17:00-17:30
+      PreferredMaintenanceWindow: Sun:18:00-Sun:18:30
+      PubliclyAccessible: false
+      StorageType: gp2
+#      Tags:
+#        Resource Tag
+      Timezone: "Tokyo Standard Time"
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+
+### Congnito ################################
+## Cognito User Pool
+  MyUserPool:
+    Type: "AWS::Cognito::UserPool"
+    Properties:
+      UserPoolName: !Ref CognitoUserPoolName
+
+## Cognito Identity Pool
+  MyIdentityPool:
+    Type: "AWS::Cognito::IdentityPool"
+    Properties:
+      IdentityPoolName: !Ref CognitoIdentityPoolName
+      AllowUnauthenticatedIdentities: true
+
+# Unauth policy
+  UnauthenticatedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action:
+          - mobileanalytics:PutEvents
+          - cognito-sync:*
+          Resource:
+          - "*"
+  UnauthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action: "sts:AssumeRoleWithWebIdentity"
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Condition:
+            StringEquals:
+              "cognito-identity.amazonaws.com:aud":
+                Ref: MyIdentityPool
+            ForAnyValue:StringLike:
+              "cognito-identity.amazonaws.com:amr": unauthenticated
+      ManagedPolicyArns:
+      - Ref: UnauthenticatedPolicy
+
+# Auth policy
+  AuthenticatedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action:
+          - mobileanalytics:PutEvents
+          - cognito-sync:*
+          - cognito-identity:*
+          Resource:
+          - "*"
+  AuthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+        - Effect: Allow
+          Action: "sts:AssumeRoleWithWebIdentity"
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Condition:
+            StringEquals:
+              "cognito-identity.amazonaws.com:aud":
+                Ref: MyIdentityPool
+            ForAnyValue:StringLike:
+              "cognito-identity.amazonaws.com:amr": authenticated
+      ManagedPolicyArns:
+      - Ref: AuthenticatedPolicy
+
+# ES auth IAM Role
+  ESAuthPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties: 
+      PolicyName: "EsHttpdAccess"
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Action: 
+                - "es:ESHttpHead"
+                - "es:ESHttpPost"
+                - "es:ESHttpGet"
+                - "es:ESHttpDelete"
+                - "es:ESHttpPut"
+            Resource: "*"
+      Roles: 
+        - 
+          Ref: "AuthenticatedRole"
+
+# ES unauth IAM Role
+  ESUnAuthPolicy:
+    Type: "AWS::IAM::Policy"
+    Properties: 
+      PolicyName: "EsHttpdAccess"
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Action: 
+                - "es:ESHttpHead"
+                - "es:ESHttpPost"
+                - "es:ESHttpGet"
+                - "es:ESHttpDelete"
+                - "es:ESHttpPut"
+            Resource: "*"
+      Roles: 
+        - 
+          Ref: "UnauthenticatedRole"
+
+  MyIdentityPoolRoleAttachment:
+    Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+    Properties:
+      IdentityPoolId: !Ref MyIdentityPool
+#      RoleMappings: 
+#        String to RoleMapping object map
+      Roles: 
+        unauthenticated:
+          Fn::GetAtt:
+          - UnauthenticatedRole
+          - Arn
+        authenticated:
+          Fn::GetAtt:
+          - AuthenticatedRole
+          - Arn
+      
+#############################################
+
+## Output
+Outputs:
+  VPC:
+    Description: "VPC ID"
+    Value: !Ref MyVPC
+  VPCCIDR:
+    Description: "VPC CIDR"
+    Value: !GetAtt MyVPC.CidrBlock
+  SimpleAD:
+    Description: "Directory ID"
+    Value: !Ref MySimpleAd
+  SimpleADPassword:
+    Description: "Administrator Password for Simple AD"
+    Value: !Ref SimpleADPW
+  SimpleADDnsIpAddresses:
+    Description: "SimpleAD DNS IP addresses"
+    Value: !Join [ ",", !GetAtt MySimpleAd.DnsIpAddresses ]
+  NATGateway01: 
+    Description: "NAT Gateway ID on ap-northeast-1a"
+    Value: !Ref MyNAT1a
+  NATGateway02: 
+    Description: "NAT Gateway ID on ap-northeast-1c"
+    Value: !Ref MyNAT1c
+  EIPforNAT01:
+    Description: "Elastic IP for Nat Gateway on ap-northeast-1a"
+    Value: !Ref EIPforNatGw1a
+  EIPforNAT02:
+    Description: "Elastic IP for Nat Gateway on ap-northeast-1c"
+    Value: !Ref EIPforNatGw1c
+  EIPID01:
+    Description: "Allocation ID for Elastic IP of NatGateway on ap-northeast-1a"
+    Value: !GetAtt EIPforNatGw1a.AllocationId
+  EIPID02:
+    Description: "Allocation ID for Elastic IP of NatGateway on ap-northeast-1c"
+    Value: !GetAtt EIPforNatGw1c.AllocationId
+  ELBID:
+    Description: "ELB DNS Name"
+    Value: !GetAtt MyELB.DNSName
+  ElasticsearchEndPoint:
+    Description: "Elasticsearch Endpoint"
+    Value: !GetAtt MyElasticsearch.DomainEndpoint
+  ElastiCachePrimaryEndPoint:
+    Description: "ElastiCache Primary EndPoint"
+    Value: !GetAtt MyElastiCache.PrimaryEndPoint.Address
+  ElastiCacheReadReplicaEndPoint:
+    Description: "ElastiCache Read Replica EndPoint"
+#    Value: !GetAtt MyElastiCache.ReadEndPoint.Addresses.List
+    Value: !Join [ ",", !GetAtt MyElastiCache.ReadEndPoint.Addresses.List ]
+  RDSEndPoint:
+    Description: "RDS End Point"
+    Value: !GetAtt RdsMsSql.Endpoint.Address
+  PrivateHostedZone:
+    Description: "Route53 Private Hosted Zone Name For ELB End Point"
+    Value: !Ref UiPathPrivateHostedZone
+  UiPathELBDnsName:
+    Description: "ELB DNS Name for UiPath. This is a route53 AILIAS Record"
+    Value: !Sub ${UiPathELBRecord}.${UiPathPrivateHostedZone}.
+  CognitoUserPoolName:
+    Description: "Cognito User Pool Name for Kibana"
+    Value: !Ref CognitoUserPoolName
+  CognitoIdentityPoolName:
+    Description: "Cognito Identity Pool Name for Kibana"
+    Value: !Ref CognitoIdentityPoolName
+  ElbOriginalDnsName:
+    Description: "Original DNS Name for ELB"
+    Value: !Sub app.${UiPathPrivateHostedZone}
+  RdsOriginalDnsName:
+    Description: "Original DNS Name for RDS"
+    Value: !Sub rds.${UiPathPrivateHostedZone}
+  RedisOriginalDnsName:
+    Description: "Original DNS Name for Redis ElastiCache"
+    Value: !Sub redis.${UiPathPrivateHostedZone}
+  ElasticsearchOriginalDnsName:
+    Description: "Original DNS Name for Elasticsearch"
+    Value: !Sub elasticsearch.${UiPathPrivateHostedZone}
