@@ -18,6 +18,7 @@ Metadata:
       - AutoScalingSubnet02CIDR
       - DataStoreSubnet01CIDR
       - DataStoreSubnet02CIDR
+      - DataStoreSubnet03CIDR
       - NATGWSubnetCIDR01
       - NATGWSubnetCIDR02
       - AmiSubnetCIDR
@@ -105,6 +106,8 @@ Metadata:
         default: "DataStore Subnet01 CIDR"
       DataStoreSubnet02CIDR:
         default: "DataStore Subnet02 CIDR"
+      DataStoreSubnet03CIDR:
+        default: "DataStore Subnet03 CIDR"
       NATGWSubnetCIDR01:
         default: "NAT Gateway Subnet01 CIDR"
       NATGWSubnetCIDR02:
@@ -233,17 +236,21 @@ Parameters:
     Description: "Data Store Subnet02 CIDR. (recommend /24)"
     Default: "10.20.7.0/24"
     Type: String
-  NATGWSubnetCIDR01:
-    Description: "NAT Gateway Subnet CIDR. (recommend /24)"
+  DataStoreSubnet03CIDR:
+    Description: "Data Store Subnet03 CIDR. (recommend /24)"
     Default: "10.20.8.0/24"
     Type: String
-  NATGWSubnetCIDR02:
+  NATGWSubnetCIDR01:
     Description: "NAT Gateway Subnet CIDR. (recommend /24)"
     Default: "10.20.9.0/24"
     Type: String
+  NATGWSubnetCIDR02:
+    Description: "NAT Gateway Subnet CIDR. (recommend /24)"
+    Default: "10.20.10.0/24"
+    Type: String
   AmiSubnetCIDR:
     Description: "Ami Instance Subnet CIDR. (recommend /24)"
-    Default: "10.20.10.0/24"
+    Default: "10.20.11.0/24"
     Type: String
 
 # Directory Services
@@ -322,7 +329,7 @@ Parameters:
     Type: String
   ESInstanceNumber:
     Description: "Zone Awareness enabled. Max:4, Min:2"
-    Default: "2"
+    Default: "3"
     Type: String
   ESDedicatedMasterType:
       Description: "Dedicated Master Instance Type. Minimum Recommended : m3.medium.elasticsearch"
@@ -759,6 +766,18 @@ Resources:
       Tags:
       - Key: Name
         Value: !Sub ${EnvPrefix}-DataStore-1c
+  DataStoreSubnet03:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: MyVPC
+#      CidrBlock: 10.20.7.0/24
+      CidrBlock: !Ref DataStoreSubnet03CIDR
+      MapPublicIpOnLaunch: false
+      AvailabilityZone: ap-northeast-1d
+      Tags:
+      - Key: Name
+        Value: !Sub ${EnvPrefix}-DataStore-1d
   NATGWSubnet01:
     Type: AWS::EC2::Subnet
     Properties:
@@ -1277,6 +1296,11 @@ Resources:
         ToPort: '445'
         CidrIp: !Ref DataStoreSubnet02CIDR
       - 
+        IpProtocol: tcp
+        FromPort: '445'
+        ToPort: '445'
+        CidrIp: !Ref DataStoreSubnet03CIDR
+      - 
         IpProtocol: udp
         FromPort: '445'
         ToPort: '445'
@@ -1289,6 +1313,14 @@ Resources:
         FromPort: '445'
         ToPort: '445'
         CidrIp: !Ref DataStoreSubnet02CIDR
+        #SourceSecurityGroupId:
+        #  Ref: AutoScalingSecurityGroup
+      # RPC - 135
+      - 
+        IpProtocol: udp
+        FromPort: '445'
+        ToPort: '445'
+        CidrIp: !Ref DataStoreSubnet03CIDR
         #SourceSecurityGroupId:
         #  Ref: AutoScalingSecurityGroup
       # RPC - 135
@@ -1307,6 +1339,12 @@ Resources:
       # Temporary RPC - 1024-65535
       - 
         IpProtocol: tcp
+        FromPort: '135'
+        ToPort: '135'
+        CidrIp: !Ref DataStoreSubnet03CIDR
+      # Temporary RPC - 1024-65535
+      - 
+        IpProtocol: tcp
         FromPort: '1024'
         ToPort: '65535'
         CidrIp: !Ref DataStoreSubnet01CIDR
@@ -1316,6 +1354,11 @@ Resources:
         ToPort: '65535'
         CidrIp: !Ref DataStoreSubnet02CIDR
       - 
+        IpProtocol: tcp
+        FromPort: '1024'
+        ToPort: '65535'
+        CidrIp: !Ref DataStoreSubnet03CIDR
+      - 
         IpProtocol: udp
         FromPort: '1024'
         ToPort: '65535'
@@ -1324,7 +1367,12 @@ Resources:
         IpProtocol: udp
         FromPort: '1024'
         ToPort: '65535'
-        CidrIp: !Ref DataStoreSubnet02CIDR    
+        CidrIp: !Ref DataStoreSubnet02CIDR   
+      - 
+        IpProtocol: udp
+        FromPort: '1024'
+        ToPort: '65535'
+        CidrIp: !Ref DataStoreSubnet03CIDR
         
 #      ## Security Group Ingress for FSx from dfs temp server
 #      # SMB 445
@@ -1635,7 +1683,7 @@ Resources:
         DedicatedMasterEnabled: true
         DedicatedMasterType: !Ref ESDedicatedMasterType
         DedicatedMasterCount: 3
-      ElasticsearchVersion: 6.3
+      ElasticsearchVersion: 6.5
       SnapshotOptions:
         AutomatedSnapshotStartHour: 17
       VPCOptions: 
